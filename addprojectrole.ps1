@@ -4,8 +4,8 @@ Add-Type -AssemblyName System.Web
 $jiracloudurl="instance"
 $jirauser="serviceaccount"
 $jiratoken="token"
-$excludedprojects=@("PROJECT1","PROJECT1")
-$userstoadd=$("12345:1111111-2222222-333333-44444") # from user directory on admin.atlassian.com
+$excludedprojects=@("PRJKEY1","PRJKEY2")
+$userstoadd=$("12345:1111111-2222222-333333-44444",""12345:1111111-2222222-333333-44445") # from user directory on admin.atlassian.com
 $rolename="Service account"
 $log="c:\temp\whereadded-test4.csv"
 
