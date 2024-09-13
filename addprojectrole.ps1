@@ -53,7 +53,7 @@ foreach ($project in $($projects | where {$excludedprojects -notcontains $_.key}
 $data=import-csv $log -delimiter ";"
 foreach ($record in $data)
 {
-
-   # $webresponse=(Invoke-WebRequest -Uri "$jiracloudurl/rest/api/3/project/$($record.project)/role/$($record.roleid)?$([System.Web.HttpUtility]::UrlEncode($urlparam))" -Method Post -ContentType "application/json" -body "{ ""user"": [""$usertoadd""]}" -Headers @{Authorization = ('Basic {0}' -f $cloudauthorizationInfo)}).content
+  $urlparam="user=$($record.userid)"
+  $webresponse=(Invoke-WebRequest -Uri "$jiracloudurl/rest/api/3/project/$($record.project)/role/$($record.roleid)?$([System.Web.HttpUtility]::UrlEncode($urlparam))" -Method Post -ContentType "application/json" -body "{ ""user"": [""$usertoadd""]}" -Headers @{Authorization = ('Basic {0}' -f $cloudauthorizationInfo)}).content
 }
 #>
