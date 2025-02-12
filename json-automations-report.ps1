@@ -2,7 +2,7 @@ $rules=get-content -path "$home/Downloads/automation-rules-202501010000.json" -e
 $outputdir="$home/tmp"
 $global:rulesresults=@()
 $global:componentsresults=@()
-$siteid="" # to be found in new URL of incoming webhook in Jira Automation right after https://api-private.atlassian.com/automation/webhooks/jira/a - e.g. ceeeeeee-deee-4444-8888-5555aaaa4444
+$siteid="" # can be found in new URL of incoming webhook in Jira Automation right after https://api-private.atlassian.com/automation/webhooks/jira/a - e.g. ceeeeeee-deee-4444-8888-5555aaaa4444
 function test-component($component)
 {
     if ($component.type -eq "jira.issue.outgoing.webhook")
