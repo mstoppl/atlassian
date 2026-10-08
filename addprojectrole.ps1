@@ -1,17 +1,24 @@
+param(
+    [ValidateNotNullOrEmpty()]
+    [string]$SecretVault = "JiraVault",
+    [ValidateNotNullOrEmpty()]
+    [string]$TokenSecretName = "JiraRoleAdminApiToken"
+)
+
 Add-Type -AssemblyName System.Web
 
 # Configuration
 $jiracloudurl="instance"
 $jirauser="serviceaccount"
-$jiratoken="token"
 $excludedprojects=@("PRJKEY1","PRJKEY2")
-$userstoadd=$("12345:1111111-2222222-333333-44444",""12345:1111111-2222222-333333-44445") # from user directory on admin.atlassian.com
+$userstoadd=@("12345:1111111-2222222-333333-44444","12345:1111111-2222222-333333-44445") # from user directory on admin.atlassian.com
 $rolename="Service account"
 $log="c:\temp\whereadded-test4.csv"
 
-[string]$cloudauthorizationInfo= ([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(('{0}:{1}' -f $jirauser, $jiratoken))))
+. (Join-Path $PSScriptRoot "jira-auth.ps1")
+$authheader = Get-JiraAuthorizationHeader -UserEmail $jirauser -SecretVault $SecretVault -TokenSecretName $TokenSecretName
 
- 
+
 function Failure {
     $global:result = $_.Exception.Response.GetResponseStream()
     $global:reader = New-Object System.IO.StreamReader($global:result)
@@ -24,7 +31,7 @@ $index=0
 $projects=@()
 do
 {
-    $webrequest=$(Invoke-WebRequest -Uri "$jiracloudurl/rest/api/3/project/search?startAt=$index&maxResults=50" -Method Get -ContentType "application/json" -Headers @{Authorization = ('Basic {0}' -f $cloudauthorizationInfo)}).content | convertfrom-json
+    $webrequest=$(Invoke-WebRequest -Uri "$jiracloudurl/rest/api/3/project/search?startAt=$index&maxResults=50" -Method Get -ContentType "application/json" -Headers $authheader).content | convertfrom-json
     $projects+=$webrequest.values
     $index+=50
 } until ($webrequest.isLast)
@@ -33,16 +40,16 @@ do
 foreach ($project in $($projects | where {$excludedprojects -notcontains $_.key}))
 {
     "Processing $($project.key)"
-    $projectdata=((Invoke-WebRequest -Uri "$jiracloudurl/rest/api/3/project/$($project.key)" -Method Get -Headers @{Authorization = ('Basic {0}' -f $cloudauthorizationInfo)}).content | convertfrom-json)   
+    $projectdata=((Invoke-WebRequest -Uri "$jiracloudurl/rest/api/3/project/$($project.key)" -Method Get -Headers $authheader).content | convertfrom-json)
     $roledata=$projectdata.roles.$rolename
     if ($roledata -ne $null)
     {
-        $members=((Invoke-WebRequest -Uri $roledata -Method Get -Headers @{Authorization = ('Basic {0}' -f $cloudauthorizationInfo)}).content | convertfrom-json)
+        $members=((Invoke-WebRequest -Uri $roledata -Method Get -Headers $authheader).content | convertfrom-json)
         foreach ($usertoadd in $userstoadd)
         {
             if ($members.actors.actoruser.accountid -notcontains $usertoadd)
             { "$($project.key);$($members[0].id);$($usertoadd)"  | out-file $log -append
-              $webresponse=((Invoke-WebRequest -Uri $roledata -Method Post -ContentType "application/json" -body "{ ""user"": [""$usertoadd""]}" -Headers @{Authorization = ('Basic {0}' -f $cloudauthorizationInfo)}).content)
+              $webresponse=((Invoke-WebRequest -Uri $roledata -Method Post -ContentType "application/json" -body "{ ""user"": [""$usertoadd""]}" -Headers $authheader).content)
             }
         }
     } else { "$($project.key) ERROR: There is no role $rolename" }
@@ -54,6 +61,6 @@ $data=import-csv $log -delimiter ";"
 foreach ($record in $data)
 {
   $urlparam="user=$($record.userid)"
-  $webresponse=(Invoke-WebRequest -Uri "$jiracloudurl/rest/api/3/project/$($record.project)/role/$($record.roleid)?$([System.Web.HttpUtility]::UrlEncode($urlparam))" -Method Post -ContentType "application/json" -body "{ ""user"": [""$usertoadd""]}" -Headers @{Authorization = ('Basic {0}' -f $cloudauthorizationInfo)}).content
+  $webresponse=(Invoke-WebRequest -Uri "$jiracloudurl/rest/api/3/project/$($record.project)/role/$($record.roleid)?$([System.Web.HttpUtility]::UrlEncode($urlparam))" -Method Post -ContentType "application/json" -body "{ ""user"": [""$usertoadd""]}" -Headers $authheader).content
 }
 #>

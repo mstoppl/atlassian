@@ -1,9 +1,14 @@
-﻿$appurl="https://myinstance.atlassian.net"
+﻿param(
+    [ValidateNotNullOrEmpty()]
+    [string]$SecretVault = "JiraVault",
+    [ValidateNotNullOrEmpty()]
+    [string]$TokenSecretName = "JiraReportingApiToken"
+)
+
+$appurl="https://myinstance.atlassian.net"
 $clouduser=""
-$cloudpassword="" #actually token
-# Basic authentication
-[string]$cloudauthinfo= ([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(('{0}:{1}' -f $clouduser, $cloudpassword))))
-$authheader=@{Authorization = ('Basic {0}' -f $cloudauthinfo)}
+. (Join-Path $PSScriptRoot "jira-auth.ps1")
+$authheader = Get-JiraAuthorizationHeader -UserEmail $clouduser -SecretVault $SecretVault -TokenSecretName $TokenSecretName
 
 # Get project and project categories
 $projects=@()
